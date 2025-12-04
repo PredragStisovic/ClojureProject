@@ -8,8 +8,7 @@
 
 (defn get-current-weather [location]
   (let [url (str base-url "/current.json")
-        response (http/get url {:query-params {:key api-key :q location}})]
-    (println "Response:" (:body response))
+        response (http/get url {:query-params {:key api-key :q location} :as :json})]
     (:body response)))
 
-(get-current-weather "Belgrade")
+(println  (:current (get-current-weather "Belgrade")))
