@@ -9,4 +9,4 @@
 (def weather  (:current (weather/get-current-weather "Belgrade")))
 (def weather-score (weather/calculate-running-score weather))
 
-(print (should-run {:weather weather-score :user user-score }))
+((if (should-run {:weather weather-score :user user-score}) "You are in great condition to go for a run" "It is recommended that you dont run at this moment"))
