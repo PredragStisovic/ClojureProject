@@ -11,7 +11,6 @@
         response (http/get url {:query-params {:key api-key :q location} :as :json})]
     (:body response)))
 
-(def weather  (:current (get-current-weather "Belgrade")))
 
 
 (defn calculate-running-score
@@ -50,5 +49,3 @@
         ]
     weighted-res
     ))
-
-(println (calculate-running-score weather))
