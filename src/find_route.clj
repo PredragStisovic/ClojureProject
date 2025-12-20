@@ -29,7 +29,7 @@
 
 (def polygon (str/join " " (circle-to-polygon (create-circle 40.766479 20.480571 1 16))))
 
-(defn fetch-tracks-from-osm [polygon] (let [query (str "[out:json];"
+(defn fetch-tracks-from-osm [polygon] (let [query (str "[out:json][timeout:30];"
                                                        "way[highway~'footway|path|track|residential|living_street'](poly:\""
                                                        polygon
                                                        "\");out geom;")]
@@ -42,11 +42,9 @@
         lat2-rad (/ (* lat2 PI) 180)
         distance-between-points (+ (Math/pow (Math/sin (/ dlat 2)) 2) (* (Math/pow (Math/sin (/ dlong 2)) 2) (Math/cos lat1-rad) (Math/cos lat2-rad)))
         angular-distance (* 2 (Math/asin (Math/sqrt distance-between-points)))]
-    ;6371 is the circumference of earth in radians
+    ;6371 is the radius of earth in kilometers
     (* 6371 angular-distance))
   )
-
-(def graph (atom {}))
 
 (defn add-way-to-graph [graph way]
   (let [geom (:geometry way)]
@@ -65,7 +63,29 @@
 
 (def ways (:elements osm-json))
 
-(doseq [way ways]
-  (swap! graph add-way-to-graph way))
+(def graph
+  (reduce add-way-to-graph {} ways))
 
-(println (take 20 @graph))
+(defn find-nearest-node [graph [user-lat user-lon]]
+  (apply min-key #(haversine-formula user-lat (first %) user-lon (second %) )
+         (keys graph)))
+
+(def start (find-nearest-node graph [40.766479 20.480571]))
+
+
+(defn find-routes [graph start run-distance]
+  (loop [paths {:nodes [start] :distance 0}]
+
+    (let [current-path (first paths)
+          final-node (last (:nodes current-path))
+          options (get graph final-node [])]
+      (let [new-path (for [[option option-distance] options
+                           :when (and (not (some (fn [node] (= node option)) (:nodes current-path)))
+                                      (<= option-distance (:distance current-path)))
+                           ])]))))
+
+
+
+(println (find-routes graph start 5))
+
+

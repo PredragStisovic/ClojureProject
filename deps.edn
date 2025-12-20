@@ -1,7 +1,9 @@
 {:deps {clj-http/clj-http {:mvn/version "3.12.3"}
         aero/aero {:mvn/version "1.1.6"}
         cheshire/cheshire {:mvn/version "5.13.0"}
-        org.clojure/data.json {:mvn/version "2.5.1"}}
+        org.clojure/data.json {:mvn/version "2.5.1"}
+        uncomplicate/fluokitten {:mvn/version "0.10.0"}
+        criterium/criterium {:mvn/version "0.4.6"}}
  :aliases
  {:test
   {:extra-paths ["test"]

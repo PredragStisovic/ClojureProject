@@ -11,8 +11,6 @@
         response (http/get url {:query-params {:key api-key :q location} :as :json})]
     (:body response)))
 
-
-
 (defn calculate-running-score
   [{:keys [feelslike_c precip_mm gust_kph vis_km]}]
 

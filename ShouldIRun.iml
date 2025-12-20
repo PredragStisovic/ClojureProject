@@ -16,6 +16,7 @@
     <orderEntry type="library" name="Deps: org.clojure/clojure:1.12.1" level="project" />
     <orderEntry type="library" name="Deps: lambdaisland/deep-diff2:2.11.216" level="project" />
     <orderEntry type="library" name="Deps: commons-codec:1.15" level="project" />
+    <orderEntry type="library" name="Deps: criterium:0.4.6" level="project" />
     <orderEntry type="library" name="Deps: org.clojure/core.specs.alpha:0.4.74" level="project" />
     <orderEntry type="library" name="Deps: lambdaisland/kaocha:1.91.1392" level="project" />
     <orderEntry type="library" name="Deps: expound:0.9.0" level="project" />
@@ -43,6 +44,7 @@
     <orderEntry type="library" name="Deps: progrock:0.1.2" level="project" />
     <orderEntry type="library" name="Deps: org.clojure/java.classpath:1.0.0" level="project" />
     <orderEntry type="library" name="Deps: commons-logging:1.2" level="project" />
+    <orderEntry type="library" name="Deps: uncomplicate/fluokitten:0.10.0" level="project" />
     <orderEntry type="library" name="Deps: org.apache.httpcomponents/httpclient:4.5.13" level="project" />
     <orderEntry type="library" name="Deps: org.clojure/core.rrb-vector:0.1.2" level="project" />
     <orderEntry type="library" name="Deps: net.java.dev.jna/jna:5.12.1" level="project" />
