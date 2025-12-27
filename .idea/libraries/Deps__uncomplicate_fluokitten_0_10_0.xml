@@ -1,9 +1,0 @@
-<component name="libraryTable">
-  <library name="Deps: uncomplicate/fluokitten:0.10.0">
-    <CLASSES>
-      <root url="jar://$MAVEN_REPOSITORY$/uncomplicate/fluokitten/0.10.0/fluokitten-0.10.0.jar!/" />
-    </CLASSES>
-    <JAVADOC />
-    <SOURCES />
-  </library>
-</component>

@@ -27,10 +27,13 @@
                                        ]
                                    coordinates-closed))
 
-(def polygon (str/join " " (circle-to-polygon (create-circle 40.766479 20.480571 1 16))))
+(def generated-circle (create-circle 43.84568 20.03683 5 8))
 
-(defn fetch-tracks-from-osm [polygon] (let [query (str "[out:json][timeout:30];"
-                                                       "way[highway~'footway|path|track|residential|living_street'](poly:\""
+
+(def polygon (str/join " " (circle-to-polygon generated-circle)))
+
+(defn fetch-tracks-from-osm [polygon] (let [query (str "[out:json][timeout:60];"
+                                                       "way[highway~'footway|path|track'](poly:\""
                                                        polygon
                                                        "\");out geom;")]
                                         (slurp (str "https://overpass-api.de/api/interpreter?data=" (java.net.URLEncoder/encode query "UTF-8")))))
@@ -70,22 +73,73 @@
   (apply min-key #(haversine-formula user-lat (first %) user-lon (second %) )
          (keys graph)))
 
-(def start (find-nearest-node graph [40.766479 20.480571]))
 
 
-(defn find-routes [graph start run-distance]
-  (loop [paths {:nodes [start] :distance 0}]
+(def start (find-nearest-node graph [43.84568 20.03683]))
 
-    (let [current-path (first paths)
-          final-node (last (:nodes current-path))
-          options (get graph final-node [])]
-      (let [new-path (for [[option option-distance] options
-                           :when (and (not (some (fn [node] (= node option)) (:nodes current-path)))
-                                      (<= option-distance (:distance current-path)))
-                           ])]))))
+(def closest-nodes
+  (map
+    (fn [{:keys [lat long]}]
+      (find-nearest-node graph [lat long]))
+    (take-nth 2 generated-circle)))
 
+;(defn find-routes [graph start run-distance]
+;  (loop [paths [{:nodes [start] :distance 0}]
+;         all-routes []]
+;
+;    (if (empty? paths)
+;      all-routes
+;      (let [current-path (first paths)
+;            rest-paths   (rest paths)
+;            final-node   (last (:nodes current-path))
+;            options      (get graph final-node [])
+;
+;            new-paths
+;            (for [[option option-distance] options
+;                  :let [new-distance (+ (:distance current-path) option-distance)]
+;                  :when (and (not (some #{option} (:nodes current-path)))
+;                             (<= new-distance run-distance))]
+;              {:nodes (conj (:nodes current-path) option)
+;               :distance new-distance})
+;
+;            updated-routes
+;            (if (and (> (:distance current-path) 0)
+;                     (<= (:distance current-path) run-distance))
+;              (if (empty? new-paths)
+;                (conj all-routes current-path)
+;                all-routes)
+;              all-routes)]
+;
+;        (recur (concat rest-paths new-paths)
+;               updated-routes)))))
+;
+;
+;
+;(println (find-routes graph start 4))
 
+(defn a-star-path-search [])
 
-(println (find-routes graph start 5))
+(defn routes-to-gpx [routes]
+  (str
+    "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+    "<gpx version=\"1.1\" creator=\"find-route\" "
+    "xmlns=\"http://www.topografix.com/GPX/1/1\">\n"
+    (apply str
+           (map-indexed
+             (fn [i {:keys [nodes distance]}]
+               (str
+                 "  <trk>\n"
+                 "    <name>Route " (inc i)
+                 " (" (format "%.2f" distance) " km)</name>\n"
+                 "    <trkseg>\n"
+                 (apply str
+                        (for [[lat lon] nodes]
+                          (format "      <trkpt lat=\"%.7f\" lon=\"%.7f\" />\n"
+                                  lat lon)))
+                 "    </trkseg>\n"
+                 "  </trk>\n"))
+             routes))
+    "</gpx>\n"))
 
+;(spit "routes.gpx" (routes-to-gpx (find-routes graph start 4)))
 
