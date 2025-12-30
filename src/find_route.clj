@@ -1,53 +1,49 @@
 (ns find_route
   (:require [clojure.string :as str]
-            [clojure.data.json :as json])
-  )
-
+            [clojure.data.json :as json]))
 
 (def PI Math/PI)
 
 (defn create-circle [latitude longitude radius num-of-points]
-  (let [radius-long (* (/ 1 (* 111.319  (Math/cos (* PI (/ latitude 180))))) radius)
-         radius-lat (* (/ 1 110.574) radius)
-         dTheta (/ (* 2 PI) num-of-points)
-         ]
-    (reduce (fn [acc e] (let [theta (* dTheta e)
-                               new-lat (+ latitude (* radius-lat (Math/sin theta)))
-                               new-long (+ longitude (* radius-long (Math/cos theta)))
-                               ]
-                           (conj acc {:lat new-lat :long new-long}))
-                          )
+  (let [radius-long (* (/ 1 (* 111.319 (Math/cos (* PI (/ latitude 180))))) radius)
+        radius-lat (* (/ 1 110.574) radius)
+        dTheta (/ (* 2 PI) num-of-points)]
+    (reduce (fn [acc e]
+              (let [theta (* dTheta e)
+                    new-lat (+ latitude (* radius-lat (Math/sin theta)))
+                    new-long (+ longitude (* radius-long (Math/cos theta)))]
+                (conj acc {:lat new-lat :long new-long})))
             []
-            (range num-of-points)))
-  )
+            (range num-of-points))))
 
-(defn circle-to-polygon [circle] (let [coordinates (apply concat (map
-                                                       vals circle))
-                                       coordinates-closed (concat coordinates (take 2 coordinates))
-                                       ]
-                                   coordinates-closed))
+(defn circle-to-polygon [circle]
+  (let [coordinates (apply concat (map vals circle))
+        coordinates-closed (concat coordinates (take 2 coordinates))]
+    coordinates-closed))
 
 (def generated-circle (create-circle 43.84568 20.03683 5 8))
-
-
 (def polygon (str/join " " (circle-to-polygon generated-circle)))
 
-(defn fetch-tracks-from-osm [polygon] (let [query (str "[out:json][timeout:60];"
-                                                       "way[highway~'footway|path|track'](poly:\""
-                                                       polygon
-                                                       "\");out geom;")]
-                                        (slurp (str "https://overpass-api.de/api/interpreter?data=" (java.net.URLEncoder/encode query "UTF-8")))))
+(defn fetch-tracks-from-osm [polygon]
+  (let [query (str "[out:json][timeout:60];"
+                   "way[highway~'footway|path|track|residential|living_street'](poly:\""
+                   polygon
+                   "\");out geom;")]
+    (slurp (str "https://overpass-api.de/api/interpreter?data="
+                (java.net.URLEncoder/encode query "UTF-8")))))
 
 (defn haversine-formula [lat1 lat2 long1 long2]
   (let [dlat (/ (* (- lat2 lat1) PI) 180)
         dlong (/ (* (- long2 long1) PI) 180)
         lat1-rad (/ (* lat1 PI) 180)
         lat2-rad (/ (* lat2 PI) 180)
-        distance-between-points (+ (Math/pow (Math/sin (/ dlat 2)) 2) (* (Math/pow (Math/sin (/ dlong 2)) 2) (Math/cos lat1-rad) (Math/cos lat2-rad)))
+        distance-between-points (+ (Math/pow (Math/sin (/ dlat 2)) 2)
+                                   (* (Math/pow (Math/sin (/ dlong 2)) 2)
+                                      (Math/cos lat1-rad)
+                                      (Math/cos lat2-rad)))
         angular-distance (* 2 (Math/asin (Math/sqrt distance-between-points)))]
-    ;6371 is the radius of earth in kilometers
-    (* 6371 angular-distance))
-  )
+    ;; 6371 is the radius of earth in kilometers
+    (* 6371 angular-distance)))
 
 (defn add-way-to-graph [graph way]
   (let [geom (:geometry way)]
@@ -62,62 +58,98 @@
       graph
       (partition 2 1 geom))))
 
+;; Load OSM data
 (def osm-json (json/read-str (fetch-tracks-from-osm polygon) :key-fn keyword))
-
 (def ways (:elements osm-json))
 
+;; Build graph
 (def graph
   (reduce add-way-to-graph {} ways))
 
 (defn find-nearest-node [graph [user-lat user-lon]]
-  (apply min-key #(haversine-formula user-lat (first %) user-lon (second %) )
+  (apply min-key #(haversine-formula user-lat (first %) user-lon (second %))
          (keys graph)))
-
-
 
 (def start (find-nearest-node graph [43.84568 20.03683]))
 
-(def closest-nodes
-  (map
-    (fn [{:keys [lat long]}]
-      (find-nearest-node graph [lat long]))
-    (take-nth 2 generated-circle)))
+(defn reconstruct-path [came-from current]
+  (loop [curr current
+         path [current]]
+    (if-let [prev (came-from curr)]
+      (recur prev (conj path prev))
+      (reverse path))))
 
-;(defn find-routes [graph start run-distance]
-;  (loop [paths [{:nodes [start] :distance 0}]
-;         all-routes []]
-;
-;    (if (empty? paths)
-;      all-routes
-;      (let [current-path (first paths)
-;            rest-paths   (rest paths)
-;            final-node   (last (:nodes current-path))
-;            options      (get graph final-node [])
-;
-;            new-paths
-;            (for [[option option-distance] options
-;                  :let [new-distance (+ (:distance current-path) option-distance)]
-;                  :when (and (not (some #{option} (:nodes current-path)))
-;                             (<= new-distance run-distance))]
-;              {:nodes (conj (:nodes current-path) option)
-;               :distance new-distance})
-;
-;            updated-routes
-;            (if (and (> (:distance current-path) 0)
-;                     (<= (:distance current-path) run-distance))
-;              (if (empty? new-paths)
-;                (conj all-routes current-path)
-;                all-routes)
-;              all-routes)]
-;
-;        (recur (concat rest-paths new-paths)
-;               updated-routes)))))
-;
-;
-;
-;(println (find-routes graph start 4))
+(defn a-star
+  [graph start goal]
+  (let [heuristic (fn [[lat lon]]
+                    (haversine-formula lat (first goal)
+                                       lon (second goal)))]
+    (loop [open-set #{start}
+           came-from {}
+           g-score {start 0}
+           f-score {start (heuristic start)}]
 
-(defn a-star-path-search [])
+      (if (empty? open-set)
+        nil
+        (let [current (apply min-key #(get f-score % Double/POSITIVE_INFINITY) open-set)]
+
+          (if (= current goal)
+            {:nodes (reconstruct-path came-from current)
+             :distance (g-score current)}
+
+            (let [open-set-two (disj open-set current)]
+              (recur
+                (reduce
+                  (fn [new-set [neighbor distance]]
+                    (let [tentative (+ (g-score current) distance)]
+                      (if (< tentative (get g-score neighbor Double/POSITIVE_INFINITY))
+                        (conj new-set neighbor)
+                        new-set)))
+                  open-set-two
+                  (get graph current []))
+
+                (reduce
+                  (fn [predecessor-map [neighbor distance]]
+                    (let [tentative (+ (g-score current) distance)]
+                      (if (< tentative (get g-score neighbor Double/POSITIVE_INFINITY))
+                        (assoc predecessor-map neighbor current)
+                        predecessor-map)))
+                  came-from
+                  (get graph current []))
+
+                (reduce
+                  (fn [cost-so-far [neighbor distance]]
+                    (let [tentative (+ (g-score current) distance)]
+                      (if (< tentative (get cost-so-far neighbor Double/POSITIVE_INFINITY))
+                        (assoc cost-so-far neighbor tentative)
+                        cost-so-far)))
+                  g-score
+                  (get graph current []))
+
+                (reduce
+                  (fn [estimated-total-cost [neighbor distance]]
+                    (let [tentative (+ (g-score current) distance)]
+                      (if (< tentative (get g-score neighbor Double/POSITIVE_INFINITY))
+                        (assoc estimated-total-cost neighbor (+ tentative (heuristic neighbor)))
+                        estimated-total-cost)))
+                  f-score
+                  (get graph current []))))))))))
+
+(defn find-nodes-at-distance [graph start target-distance tolerance]
+  (->> (keys graph)
+       (remove #(= % start))
+       (map (fn [node]
+              [node (haversine-formula (first start) (first node)
+                                       (second start) (second node))]))
+       (filter (fn [[_ distance]]
+                 (<= (Math/abs (- distance target-distance)) tolerance)))
+       (sort-by second)
+       (map first)))
+
+(defn find-routes [graph start targets]
+  (->> targets
+       (map #(a-star graph start %))
+       (remove nil?)))
 
 (defn routes-to-gpx [routes]
   (str
@@ -141,5 +173,4 @@
              routes))
     "</gpx>\n"))
 
-;(spit "routes.gpx" (routes-to-gpx (find-routes graph start 4)))
-
+(spit "routes.gpx" (routes-to-gpx (find-routes graph start (take 4 (find-nodes-at-distance graph start 2.5 0.5)))))
