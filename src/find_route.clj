@@ -21,9 +21,6 @@
         coordinates-closed (concat coordinates (take 2 coordinates))]
     coordinates-closed))
 
-(def generated-circle (create-circle 43.84568 20.03683 5 8))
-(def polygon (str/join " " (circle-to-polygon generated-circle)))
-
 (defn fetch-tracks-from-osm [polygon]
   (let [query (str "[out:json][timeout:60];"
                    "way[highway~'footway|path|track|residential|living_street'](poly:\""
@@ -58,19 +55,10 @@
       graph
       (partition 2 1 geom))))
 
-;; Load OSM data
-(def osm-json (json/read-str (fetch-tracks-from-osm polygon) :key-fn keyword))
-(def ways (:elements osm-json))
-
-;; Build graph
-(def graph
-  (reduce add-way-to-graph {} ways))
-
 (defn find-nearest-node [graph [user-lat user-lon]]
   (apply min-key #(haversine-formula user-lat (first %) user-lon (second %))
          (keys graph)))
 
-(def start (find-nearest-node graph [43.84568 20.03683]))
 
 (defn reconstruct-path [came-from current]
   (loop [curr current
@@ -80,7 +68,7 @@
       (reverse path))))
 
 (defn a-star
-  [graph start goal]
+  [graph start goal distance]
   (let [heuristic (fn [[lat lon]]
                     (haversine-formula lat (first goal)
                                        lon (second goal)))]
@@ -93,7 +81,7 @@
         nil
         (let [current (apply min-key #(get f-score % Double/POSITIVE_INFINITY) open-set)]
 
-          (if (= current goal)
+          (if (or (= current goal) (>= (g-score current) distance))
             {:nodes (reconstruct-path came-from current)
              :distance (g-score current)}
 
@@ -146,9 +134,9 @@
        (sort-by second)
        (map first)))
 
-(defn find-routes [graph start targets]
+(defn find-routes [graph start targets max-distance]
   (->> targets
-       (map #(a-star graph start %))
+       (map #(a-star graph start % max-distance))
        (remove nil?)))
 
 (defn routes-to-gpx [routes]
@@ -173,4 +161,27 @@
              routes))
     "</gpx>\n"))
 
-(spit "routes.gpx" (routes-to-gpx (find-routes graph start (take 4 (find-nodes-at-distance graph start 2.5 0.5)))))
+(defn generate-routes
+  [{:keys [lat lon distance]}]
+
+  (let [radius-km distance
+        num-points 8
+        circle (create-circle lat lon radius-km num-points)
+        polygon (str/join " " (circle-to-polygon circle))
+        osm-json (json/read-str
+                   (fetch-tracks-from-osm polygon)
+                   :key-fn keyword)
+        ways (:elements osm-json)
+        graph (reduce add-way-to-graph {} ways)
+        start (find-nearest-node graph [lat lon])
+        targets (find-nodes-at-distance
+                  graph
+                  start
+                  distance
+                  0.5)
+        routes (find-routes graph start (take 10 targets) distance)]
+
+
+    {:start [lat lon]
+     :distance distance
+     :routes routes}))
