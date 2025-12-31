@@ -17,6 +17,7 @@
     <orderEntry type="library" name="Deps: lambdaisland/deep-diff2:2.11.216" level="project" />
     <orderEntry type="library" name="Deps: commons-codec:1.15" level="project" />
     <orderEntry type="library" name="Deps: criterium:0.4.6" level="project" />
+    <orderEntry type="library" name="Deps: org.apache.httpcomponents.core5/httpcore5-h2:5.3.4" level="project" />
     <orderEntry type="library" name="Deps: org.eclipse.jetty/jetty-xml:11.0.21" level="project" />
     <orderEntry type="library" name="Deps: org.eclipse.jetty/jetty-servlet:11.0.21" level="project" />
     <orderEntry type="library" name="Deps: org.clojure/core.specs.alpha:0.4.74" level="project" />
@@ -74,6 +75,7 @@
     <orderEntry type="library" name="Deps: org.clojure/core.rrb-vector:0.1.2" level="project" />
     <orderEntry type="library" name="Deps: org.ring-clojure/ring-websocket-protocols:1.12.2" level="project" />
     <orderEntry type="library" name="Deps: crypto-equality:1.0.1" level="project" />
+    <orderEntry type="library" name="Deps: org.apache.httpcomponents.client5/httpclient5:5.5" level="project" />
     <orderEntry type="library" name="Deps: net.java.dev.jna/jna:5.12.1" level="project" />
     <orderEntry type="library" name="Deps: cheshire:5.13.0" level="project" />
     <orderEntry type="library" name="Deps: tigris:0.1.2" level="project" />
@@ -84,8 +86,10 @@
     <orderEntry type="library" name="Deps: dev.weavejester/medley:1.9.0" level="project" />
     <orderEntry type="library" name="Deps: potemkin:0.4.5" level="project" />
     <orderEntry type="library" name="Deps: org.slf4j/slf4j-api:2.0.9" level="project" />
+    <orderEntry type="library" name="Deps: org.apache.httpcomponents.core5/httpcore5:5.3.4" level="project" />
     <orderEntry type="library" name="Deps: org.clojure/test.check:1.1.1" level="project" />
     <orderEntry type="library" name="Deps: hawk:0.2.11" level="project" />
+    <orderEntry type="library" name="Deps: ring/ring-mock:0.6.2" level="project" />
     <orderEntry type="library" name="Deps: org.eclipse.jetty/jetty-server:11.0.21" level="project" />
     <orderEntry type="library" name="Deps: org.apache.httpcomponents/httpmime:4.5.13" level="project" />
     <orderEntry type="library" name="Deps: ring/ring-core:1.12.2" level="project" />
