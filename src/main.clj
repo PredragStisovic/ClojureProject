@@ -1,17 +1,6 @@
 (ns main
-  (:require [user-data]
-            [weather]
-            [api_routes]
+  (:require [api_routes]
             [org.httpkit.server :as server]))
-
-(defn should-run [conditions]
-  (>= (apply * (map val conditions)) 0.5))
-
-(defn run-message [user-score weather-score]
-  (if (should-run {:weather weather-score
-                   :user user-score})
-    "You are in great condition to go for a run"
-    "It is recommended that you dont run at this moment"))
 
 (defn -main [& args]
   (let [port (Integer/parseInt (or (System/getenv "PORT") "8080"))]
