@@ -15,4 +15,4 @@
         combined (+ (* weather-score 0.6)
                     (* user-score 0.4))]
     {:score combined
-     :text-description (score-description combined)}))
+     :text_description (score-description combined)}))
