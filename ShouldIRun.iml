@@ -29,6 +29,7 @@
     <orderEntry type="library" name="Deps: org.clojure/tools.cli:1.1.230" level="project" />
     <orderEntry type="library" name="Deps: org.eclipse.jetty.toolchain/jetty-jakarta-servlet-api:5.0.2" level="project" />
     <orderEntry type="library" name="Deps: compojure:1.7.2" level="project" />
+    <orderEntry type="library" name="Deps: io.github.cdimascio/dotenv-java:3.0.0" level="project" />
     <orderEntry type="library" name="Deps: lambdaisland/clj-diff:1.4.78" level="project" />
     <orderEntry type="library" name="Deps: org.eclipse.jetty/jetty-http:11.0.21" level="project" />
     <orderEntry type="library" name="Deps: org.eclipse.jetty/jetty-util:11.0.21" level="project" />
@@ -66,6 +67,7 @@
     <orderEntry type="library" name="Deps: org.clojure/java.classpath:1.0.0" level="project" />
     <orderEntry type="library" name="Deps: clout:2.2.1" level="project" />
     <orderEntry type="library" name="Deps: commons-logging:1.2" level="project" />
+    <orderEntry type="library" name="Deps: clojure.java-time:1.4.3" level="project" />
     <orderEntry type="library" name="Deps: borkdude/dynaload:0.3.5" level="project" />
     <orderEntry type="library" name="Deps: borkdude/edamame:1.4.32" level="project" />
     <orderEntry type="library" name="Deps: metosin/malli:0.20.0" level="project" />

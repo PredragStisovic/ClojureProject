@@ -1,2 +1,2 @@
-  {:api-key #env API-KEY
- :base-url #env BASE-URL}
+  {:api-key  "4eeb1f4eb2ca496daef202837252911"
+   :base-url "https://api.weatherapi.com/v1"}
