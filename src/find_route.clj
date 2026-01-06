@@ -162,26 +162,26 @@
     "</gpx>\n"))
 
 (defn generate-routes
-  [{:keys [lat lon distance]}]
+  [{:keys [latitude longitude distance]}]
 
   (let [radius-km distance
         num-points 8
-        circle (create-circle lat lon radius-km num-points)
+        circle (create-circle latitude longitude radius-km num-points)
         polygon (str/join " " (circle-to-polygon circle))
         osm-json (json/read-str
                    (fetch-tracks-from-osm polygon)
                    :key-fn keyword)
         ways (:elements osm-json)
         graph (reduce add-way-to-graph {} ways)
-        start (find-nearest-node graph [lat lon])
+        start (find-nearest-node graph [latitude longitude])
         targets (find-nodes-at-distance
                   graph
                   start
                   distance
                   0.5)
-        routes (find-routes graph start (take 10 targets) distance)]
+        routes (find-routes graph start (take 10 (shuffle targets)) distance)]
 
 
-    {:start [lat lon]
+    {:start [latitude longitude]
      :distance distance
      :routes routes}))
