@@ -21,13 +21,27 @@
         coordinates-closed (concat coordinates (take 2 coordinates))]
     coordinates-closed))
 
-(defn fetch-tracks-from-osm [polygon]
-  (let [query (str "[out:json][timeout:60];"
-                   "way[highway~'footway|path|track|residential|living_street'](poly:\""
-                   polygon
-                   "\");out geom;")]
-    (slurp (str "https://overpass-api.de/api/interpreter?data="
-                (java.net.URLEncoder/encode query "UTF-8")))))
+(defn fetch-tracks-from-osm
+  ([polygon] (fetch-tracks-from-osm polygon 3 1000))
+  ([polygon retries delay-ms]
+   (let [query (str "[out:json][timeout:60];"
+                    "way[highway~'footway|path|track|residential|living_street']"
+                    "(poly:\""
+                    polygon
+                    "\");out geom;")
+         url (str "https://overpass-api.de/api/interpreter?data="
+                  (java.net.URLEncoder/encode query "UTF-8"))]
+     (try
+       (slurp url)
+       (catch Exception e
+         (if (pos? retries)
+           (do
+             (Thread/sleep delay-ms)
+             (fetch-tracks-from-osm polygon
+                                    (dec retries)
+                                    (* 2 delay-ms)))
+           (throw e)))))))
+
 
 (defn haversine-formula [lat1 lat2 long1 long2]
   (let [dlat (/ (* (- lat2 lat1) PI) 180)
