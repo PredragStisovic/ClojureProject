@@ -175,6 +175,13 @@
              routes))
     "</gpx>\n"))
 
+(defn routes-to-gpx-response [routes]
+  {:status 200
+   :headers {"Content-Type" "application/gpx+xml"
+             "Content-Disposition" "attachment; filename=\"routes.gpx\""}
+   :body (routes-to-gpx routes)})
+
+
 (defn generate-routes
   [{:keys [latitude longitude distance]}]
 

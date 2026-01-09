@@ -14,6 +14,9 @@
            (POST "/should-i-run-api/should-user-run/calculate" {body :json-params}
              (response (should-user-run/return-run-message body)))
 
+           (POST "/should-i-run-api/export-to-gpx" {body :json-params}
+             (response (find_route/routes-to-gpx-response body)))
+
            (route/resources "/")
            (route/not-found "Not Found"))
 
