@@ -1,6 +1,7 @@
 (ns user-data
     (:require [malli.core :as m]
-              [java-time.api :as jt]))
+              [java-time.api :as jt]
+              [evaluation_logic]))
 
 
 (def Run
@@ -9,12 +10,44 @@
      [:moving_time [:int {:min 0}]]
      [:start_date :string]])
 
+(def training-score-rules
+  {:recency
+   [{:op :=  :threshold 0 :score 0.0}
+    {:op :=  :threshold 1 :score 0.3}
+    {:op :=  :threshold 2 :score 0.6}
+    {:range [3 5] :score 1.0}
+    {:op :=  :threshold 6 :score 0.8}
+    {:op :=  :threshold 7 :score 0.6}
+    {:else true :score 0.4}]
+
+   :intensity
+   [{:op :< :threshold 200 :score 1.0}
+    {:op :< :threshold 400 :score 0.7}
+    {:op :< :threshold 600 :score 0.4}
+    {:else true :score 0.2}]
+
+   :consistency
+   [{:op := :threshold 1 :score 0.6}
+    {:range [2 3] :score 1.0}
+    {:range [4 5] :score 0.8}
+    {:else true :score 0.5}]})
+
+(def score-weights
+  {:recency 0.45
+   :intensity 0.25
+   :consistency 0.20
+   :baseline 0.10})
+
+
 
 (defn get-user-score [body]
   (let [runs (:runs body)
         latest-run (first runs)]
-    (if-not (m/validate Run latest-run)
+
+    (if (or (empty? runs)
+            (not (m/validate Run latest-run)))
       0.0
+
       (let [days-since-last-run
             (jt/time-between
               (jt/instant (:start_date latest-run))
@@ -26,29 +59,24 @@
 
             num-of-runs (count runs)
 
-            recency-score (cond
-                            (= days-since-last-run 0) 0.0
-                            (= days-since-last-run 1) 0.3
-                            (= days-since-last-run 2) 0.6
-                            (<= 3 days-since-last-run 5) 1.0
-                            (= days-since-last-run 6) 0.8
-                            (= days-since-last-run 7) 0.6
-                            :else 0.4)
+            recency-score
+            (evaluation_logic/score-from-rules
+              days-since-last-run
+              (:recency training-score-rules))
 
-            intensity-score (cond
-                              (< intensity 200) 1.0
-                              (< intensity 400) 0.7
-                              (< intensity 600) 0.4
-                              :else 0.2)
+            intensity-score
+            (evaluation_logic/score-from-rules
+              intensity
+              (:intensity training-score-rules))
 
-            consistency-score (cond
-                                (= num-of-runs 1) 0.6
-                                (<= 2 num-of-runs 3) 1.0
-                                (<= 4 num-of-runs 5) 0.8
-                                :else 0.5)]
+            consistency-score
+            (evaluation_logic/score-from-rules
+              num-of-runs
+              (:consistency training-score-rules))]
 
-        (+ (* 0.45 recency-score)
-           (* 0.25 intensity-score)
-           (* 0.20 consistency-score)
-           (* 0.10 0.2))))))
+        (+ (* (:recency score-weights) recency-score)
+           (* (:intensity score-weights) intensity-score)
+           (* (:consistency score-weights) consistency-score)
+           (* (:baseline score-weights) 0.2))))))
+
 

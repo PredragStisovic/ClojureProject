@@ -1,7 +1,8 @@
 (ns weather
   (:require
     [clj-http.client :as http]
-    [aero.core :refer [read-config]]))
+    [aero.core :refer [read-config]]
+    [evaluation_logic]))
 
 (defn get-current-weather [latitude longitude]
   (let [config (read-config "config.edn")
@@ -14,6 +15,28 @@
                             :as :json})]
     (:body response)))
 
+(def weather-score-rules
+  {:temperature
+   [{:op :<= :threshold 0  :score 0}
+    {:op :>= :threshold 35 :score 0}
+    {:op :<= :threshold 10 :score 0.2}
+    {:op :>= :threshold 25 :score 0.5}]
+
+   :precipitation
+   [{:op :<= :threshold 0.1 :score 1.0}
+    {:op :<= :threshold 0.5 :score 0.6}
+    {:op :<= :threshold 1.0 :score 0.3}
+    {:else true :score 0}]
+
+   :wind
+   [{:op :>= :threshold 50 :score 0}
+    {:op :>= :threshold 30 :score 0.3}
+    {:op :>= :threshold 15 :score 0.6}]
+
+   :visibility
+   [{:op :< :threshold 1 :score 0}
+    {:op :< :threshold 2 :score 0.5}]})
+
 (defn calculate-weather-score
   [latitude longitude]
   (let [current-weather (:current (get-current-weather latitude longitude))
@@ -22,33 +45,10 @@
         gust_kph (:gust_kph current-weather)
         vis_km (:vis_km current-weather)
 
-        temp-score
-        (cond
-          (<= feelslike_c 0) 0
-          (>= feelslike_c 35) 0
-          (<= feelslike_c 10) 0.2
-          (>= feelslike_c 25) 0.5
-          :else 1)
-
-        precipitation-score
-        (cond
-          (> precip_mm 2.0) 0
-          (> precip_mm 1.0) 0.3
-          (> precip_mm 0.5) 0.6
-          :else 1)
-
-        wind-score
-        (cond
-          (>= gust_kph 50) 0
-          (>= gust_kph 30) 0.3
-          (>= gust_kph 15) 0.6
-          :else 1)
-
-        visibility-score
-        (cond
-          (< vis_km 1) 0
-          (< vis_km 2) 0.5
-          :else 1)
+        temp-score (evaluation_logic/score-from-rules feelslike_c (:temperature weather-score-rules))
+        precipitation-score (evaluation_logic/score-from-rules precip_mm (:precipitation weather-score-rules))
+        wind-score (evaluation_logic/score-from-rules gust_kph (:wind weather-score-rules))
+        visibility-score (evaluation_logic/score-from-rules vis_km (:visibility weather-score-rules))
 
         total (/ (+ temp-score precipitation-score wind-score visibility-score) 4.0)]
     total))

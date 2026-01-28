@@ -6,6 +6,10 @@
             [find_route]
             [should-user-run]))
 
+(def cors-headers  {"Access-Control-Allow-Origin" "http://localhost:3000"
+                    "Access-Control-Allow-Methods" "GET,POST,PUT,DELETE,OPTIONS"
+                    "Access-Control-Allow-Headers" "Content-Type,Authorization"})
+
 (defroutes app-routes
 
            (POST "/should-i-run-api/return-routes" {body :json-params}
@@ -33,18 +37,14 @@
     (let [resp (handler request)
           headers (get resp :headers {})
           new-headers (merge headers
-                             {"Access-Control-Allow-Origin" "http://localhost:3000"
-                              "Access-Control-Allow-Methods" "GET,POST,PUT,DELETE,OPTIONS"
-                              "Access-Control-Allow-Headers" "Content-Type,Authorization"})]
+                             cors-headers)]
       (assoc resp :headers new-headers))))
 
 
 (defroutes options-routes
            (OPTIONS "*" []
              {:status 200
-              :headers {"Access-Control-Allow-Origin"  "http://localhost:3000"
-                        "Access-Control-Allow-Methods" "GET,POST,PUT,DELETE,OPTIONS"
-                        "Access-Control-Allow-Headers" "Content-Type,Authorization"}}))
+              :headers cors-headers}))
 
 
 

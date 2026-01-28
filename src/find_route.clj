@@ -3,6 +3,7 @@
             [clojure.data.json :as json]))
 
 (def PI Math/PI)
+(def earth-radius-km 6371)
 
 (defn create-circle [latitude longitude radius num-of-points]
   (let [radius-long (* (/ 1 (* 111.319 (Math/cos (* PI (/ latitude 180))))) radius)
@@ -53,8 +54,7 @@
                                       (Math/cos lat1-rad)
                                       (Math/cos lat2-rad)))
         angular-distance (* 2 (Math/asin (Math/sqrt distance-between-points)))]
-    ;; 6371 is the radius of earth in kilometers
-    (* 6371 angular-distance)))
+    (* earth-radius-km angular-distance)))
 
 (defn add-way-to-graph [graph way]
   (let [geom (:geometry way)]
@@ -81,11 +81,34 @@
       (recur prev (conj path prev))
       (reverse path))))
 
+(defn process-neighbors
+  [graph current-node open-set came-from g-score f-score heuristic]
+
+  (reduce
+    (fn [[updated-open-set updated-came-from updated-g-score updated-f-score]
+         [neighbor distance]]
+
+      (let [tentative (+ (g-score current-node) distance)
+            previous (get updated-g-score neighbor Double/POSITIVE_INFINITY)]
+
+        (if (< tentative previous)
+          [(conj updated-open-set neighbor)
+           (assoc updated-came-from neighbor current-node)
+           (assoc updated-g-score neighbor tentative)
+           (assoc updated-f-score neighbor
+                                  (+ tentative (heuristic neighbor)))]
+          [updated-open-set updated-came-from updated-g-score updated-f-score])))
+
+    [open-set came-from g-score f-score]
+    (get graph current-node [])))
+
 (defn a-star
-  [graph start goal distance]
-  (let [heuristic (fn [[lat lon]]
-                    (haversine-formula lat (first goal)
-                                       lon (second goal)))]
+  [graph start goal max-distance]
+
+  (let [heuristic (fn [node]
+                    (haversine-formula (first node) (first goal)
+                                       (second node) (second goal)))]
+
     (loop [open-set #{start}
            came-from {}
            g-score {start 0}
@@ -93,49 +116,21 @@
 
       (if (empty? open-set)
         nil
-        (let [current (apply min-key #(get f-score % Double/POSITIVE_INFINITY) open-set)]
 
-          (if (or (= current goal) (>= (g-score current) distance))
+        (let [current (apply min-key #(get f-score % Double/POSITIVE_INFINITY)
+                             open-set)]
+
+          (if (or (= current goal)
+                  (>= (g-score current) max-distance))
+
             {:nodes (reconstruct-path came-from current)
              :distance (g-score current)}
 
-            (let [open-set-two (disj open-set current)]
-              (recur
-                (reduce
-                  (fn [new-set [neighbor distance]]
-                    (let [tentative (+ (g-score current) distance)]
-                      (if (< tentative (get g-score neighbor Double/POSITIVE_INFINITY))
-                        (conj new-set neighbor)
-                        new-set)))
-                  open-set-two
-                  (get graph current []))
+            (let [open-set-two (disj open-set current)
+                  [new-open-set new-came-from new-g-score new-f-score]
+                  (process-neighbors graph current open-set-two came-from g-score f-score heuristic)]
 
-                (reduce
-                  (fn [predecessor-map [neighbor distance]]
-                    (let [tentative (+ (g-score current) distance)]
-                      (if (< tentative (get g-score neighbor Double/POSITIVE_INFINITY))
-                        (assoc predecessor-map neighbor current)
-                        predecessor-map)))
-                  came-from
-                  (get graph current []))
-
-                (reduce
-                  (fn [cost-so-far [neighbor distance]]
-                    (let [tentative (+ (g-score current) distance)]
-                      (if (< tentative (get cost-so-far neighbor Double/POSITIVE_INFINITY))
-                        (assoc cost-so-far neighbor tentative)
-                        cost-so-far)))
-                  g-score
-                  (get graph current []))
-
-                (reduce
-                  (fn [estimated-total-cost [neighbor distance]]
-                    (let [tentative (+ (g-score current) distance)]
-                      (if (< tentative (get g-score neighbor Double/POSITIVE_INFINITY))
-                        (assoc estimated-total-cost neighbor (+ tentative (heuristic neighbor)))
-                        estimated-total-cost)))
-                  f-score
-                  (get graph current []))))))))))
+              (recur new-open-set new-came-from new-g-score new-f-score))))))))
 
 (defn find-nodes-at-distance [graph start target-distance tolerance]
   (->> (keys graph)
@@ -186,6 +181,7 @@
   [{:keys [latitude longitude distance]}]
 
   (let [radius-km distance
+        distance-tolerance 0.5
         num-points 8
         circle (create-circle latitude longitude radius-km num-points)
         polygon (str/join " " (circle-to-polygon circle))
@@ -199,7 +195,7 @@
                   graph
                   start
                   distance
-                  0.5)
+                  distance-tolerance)
         routes (find-routes graph start (take 10 (shuffle targets)) distance)]
 
 
